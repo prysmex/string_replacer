@@ -23,12 +23,12 @@ Or install it yourself as:
 
 ## Usage
 
-The idea is to simple extend the base StringReplacer class and define the whitelist of methods you want to have available.
+The idea is to simple extend the base StringReplacer::Replacer class and define the whitelist of methods you want to have available.
 
 An example:
 ```ruby
 
-class CustomStringReplacer < StringReplacer
+class CustomStringReplacer < StringReplacer::Replacer
   def i18n(argument)
     I18n.t(argument.strip)
   end
