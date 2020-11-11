@@ -1,8 +1,9 @@
 # StringReplacer
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/string_replacer`. To experiment with that code, run `bin/console` for an interactive prompt.
+This is a very simple gem that uses regex to replace a string with handlebars notation. A simple use case can be to safely allow a user to define a string that can with a predefined set of avaiable methods that can also take some arguments.
 
-TODO: Delete this and the text above, and describe your gem
+There are other more robust solutions like https://github.com/Shopify/liquid, but if your are looking for a lightweight solution, this might be the way to go.
+
 
 ## Installation
 
@@ -22,14 +23,32 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+The idea is to simple extend the base StringReplacer class and define the whitelist of methods you want to have available.
 
-## Development
+An example:
+```ruby
 
-After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+class CustomStringReplacer < StringReplacer
+  def i18n(argument)
+    I18n.t(argument.strip)
+  end
+  
+  def upcase(argument)
+    argument.upcase
+  end
+end
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+your_string = CustomStringReplacer.new('The {{upcase(translation)}} of hello is: {{i18n(hello)}}')
 
-## Contributing
+your_string.replace
+# returns 'The TRANSLATION of hello is: hola'
+```
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/string_replacer.
+You can even nest multiple methods like this.
+
+```ruby
+your_string = CustomStringReplacer.new('The translation of hello is: {{upcase(i18n(hello))}}')
+
+your_string.replace
+# returns 'The translation of hello is: HOLA'
+```
