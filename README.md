@@ -2,7 +2,7 @@
 
 This is a very simple gem that uses regex to replace a string with handlebars notation. A simple use case can be to safely allow a user to define a string that can with a predefined set of avaiable methods that can also take some arguments.
 
-There are other more robust solutions like https://github.com/Shopify/liquid, but if your are looking for a lightweight solution, this might be the way to go.
+There are other more robust solutions like https://github.com/Shopify/liquid, but if your are looking for a very lightweight extendible solution, this might be the way to go.
 
 
 ## Installation
