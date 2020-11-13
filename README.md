@@ -23,17 +23,17 @@ Or install it yourself as:
 
 ## Usage
 
-The idea is to simple extend the base StringReplacer::Replacer class and define the whitelist of methods you want to have available.
+The idea is to simple extend the base StringReplacer::Replacer class and user the `register_helper` class method to define a whitelist of methods you want to have available.
 
 An example:
 ```ruby
 
 class CustomStringReplacer < StringReplacer::Replacer
-  def i18n(argument)
+  register_helper(:i18n) do |argument|
     I18n.t(argument.strip)
   end
   
-  def upcase(argument)
+  register_helper(:upcase) |argument|
     argument.upcase
   end
 end
@@ -52,3 +52,37 @@ your_string = CustomStringReplacer.new('The translation of hello is: {{upcase(i1
 your_string.replace
 # returns 'The translation of hello is: HOLA'
 ```
+
+## Errors
+If there are any errors (like definining a method inside the handlebars that is not registered) execution of the
+replacement is halted and the errors can be accessed via de `errors` method.
+
+```ruby
+your_error_string = CustomStringReplacer.new('This will cause an {{upcase(error)}} {{some_unregisered_method()}}')
+your_error_string.replace
+# returns 'This will cause an ERROR {{some_unregisered_method()}}'
+
+your_error_string.errors
+# returns [#<NoMethodError: Unregistered helper 'some_unregisered_method' while interpolating '{{some_unregisered_method()}}'>]
+```
+
+If you want errors to be raised, simply use `replace!`
+
+## Hash arguments
+It is possible to pass a hash of arguments that can be accessed by the registered methods. This is helpful when you need some context that is not provided
+by the handlebars expression.
+
+```ruby
+class AnotherStringReplacer < StringReplacer::Replacer
+  register_helper(:current_username) do
+    @passed_data[:user_name]
+  end
+end
+
+your_string = AnotherStringReplacer.new('The name of the current user name is: {{current_username()}}!', {user_name: 'Yoda'})
+your_string.replace
+# returns 'The name of the current user name is: Yoda!'
+```
+
+
+
