@@ -33,7 +33,7 @@ class CustomStringReplacer < StringReplacer::Replacer
     I18n.t(argument.strip)
   end
   
-  register_helper(:upcase) |argument|
+  register_helper(:upcase) do |argument|
     argument.upcase
   end
 end
