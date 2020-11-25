@@ -26,9 +26,35 @@ module StringReplacer
       end
 
     end
-
-    HANDLEBARS_REGEX = /{{.*?}}/
-    INNERMOST_METHOD_REGEX = /{{.*?\b((\w+)\(((?=[^(]*?\)).*?)\))[) ]*}}/
+    
+    # always keep in sync method name regex! [a-zA-Z0-9_]*
+    INNERMOST_METHOD_REGEX = /
+      (?<handlebars>
+        {{                          # opening double braces
+        (?<before>                  # open none capture group everything before innermost method
+          \s*                       # allow any amount of spaces, for visual clarity
+          [a-zA-Z0-9_]*             # method name
+          \(                        # open parenthesis
+          (?=\s*[a-zA-Z0-9_]*\()    # ensure there are more inner methods
+        )*
+        (?<to_replace>
+          \s*                       # allow any amount of spaces, for visual clarity
+          (?<name>
+            [a-zA-Z0-9_]+           # innermost method name
+          )
+          \(                        # parenthesis
+          (?<arguments>
+            [a-zA-Z0-9_. |-]*      # innermost method arguments
+          )
+          \)
+          \s*                       # allow any amount of spaces, for visual clarity
+        )
+        (?<after>
+          [) ]*                       # only allow closing parenthesis and spaces
+        )
+        }}
+      )                          # closing double braces
+    /x
   
     attr_reader :string
     attr_reader :passed_data
@@ -45,7 +71,7 @@ module StringReplacer
     def replace
       string = @string
       @errors = []
-      string.scan(HANDLEBARS_REGEX).each do |handlebars|
+      string.scan(INNERMOST_METHOD_REGEX).map(&:first).each do |handlebars|
         begin
           result = execute_methods_recursively(handlebars)
           result = result.slice(2..-3) #remove the handlebars
@@ -77,12 +103,12 @@ module StringReplacer
     def execute_methods_recursively(handlebars)
       string = handlebars
   
-      inner_method = string.match(INNERMOST_METHOD_REGEX)
-      if inner_method
-        captures = inner_method.captures
-        to_replace = captures[0]
-        method_name = captures[1]
-        argument = captures[2]
+      match = string.match(INNERMOST_METHOD_REGEX)
+      if match
+        captures = match.named_captures
+        to_replace = captures['to_replace']
+        method_name = captures['name']
+        argument = captures['arguments']
 
         if !self.method_is_whitelisted?(method_name)
           raise NoMethodError.new("Unregistered helper '#{method_name}'")
