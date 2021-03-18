@@ -24,6 +24,14 @@ module StringReplacer
         @registered_helpers.push(name)
         name
       end
+      
+      # Unregisters a helper from class
+      # @return [Array] Remaining helpers
+      def unregister_helper(name)
+        name = name.to_sym
+        undef_method name rescue false
+        @registered_helpers = @registered_helpers - [name]
+      end
 
     end
     
@@ -61,6 +69,9 @@ module StringReplacer
     attr_reader :errors
   
     def initialize(string, passed_data = {})
+      raise TypeError.new("first argument must be a String, passed #{string.class}") unless string.is_a?(String)
+      raise TypeError.new("first argument must be a Hash, passed #{string.class}") unless passed_data.is_a?(Hash)
+
       @string = string
       @passed_data = passed_data
     end
