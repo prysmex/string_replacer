@@ -1,13 +1,15 @@
 require 'string_replacer'
+require 'byebug'
 
 def remove_classes(*classes)
-  classes.each do |_class|
-    Object.send(:remove_const, _class.name.to_sym) if defined?(_class)
-  end and true
+  classes.each do |klass|
+    Object.send(:remove_const, klass.name.to_sym) if defined?(klass)
+  end
 end
 
 describe StringReplacer::Replacer do
 
+  # create DummyReplacer and DummyReplacerSubclass
   before(:all) do
     class ::DummyReplacer < StringReplacer::Replacer
 
@@ -58,6 +60,13 @@ describe StringReplacer::Replacer do
     it "can unregister existing helpers" do
       DummyReplacerSubclass.unregister_helper(:downcase)
       expect(::DummyReplacerSubclass.registered_helpers.last).to eql(:swapcase)
+    end
+  end
+
+  describe '#helper_exists?' do
+    it "check for existing helpers" do
+      expect(::DummyReplacerSubclass.new('').helper_exists?(:capitalize)).to eql(true)
+      expect(::DummyReplacer.new('').helper_exists?(:capitalize)).to eql(true)
     end
   end
 

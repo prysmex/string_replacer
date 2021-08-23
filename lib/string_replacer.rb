@@ -1,6 +1,10 @@
 require "string_replacer/version"
 
 module StringReplacer
+  #
+  # Wrapps a string with simple handlebar notation {{some_method()}} that may contain one or
+  # more methods (helpers) that will be evaluated in a safe way when calling #replace
+  #
   class Replacer
 
     #initialize class instance variable
@@ -17,6 +21,7 @@ module StringReplacer
       end
 
       # Registers a helper to allow its usage.
+      #
       # @return [String] name of registered helper
       def register_helper(name, &block)
         name = name.to_sym
@@ -26,6 +31,7 @@ module StringReplacer
       end
       
       # Unregisters a helper from class
+      #
       # @return [Array] Remaining helpers
       def unregister_helper(name)
         name = name.to_sym
@@ -35,33 +41,55 @@ module StringReplacer
 
     end
     
-    # always keep in sync method name regex! [a-zA-Z0-9_]*
-    INNERMOST_METHOD_REGEX = /
+    # IMPORTANT! always keep in sync method name regex! [a-zA-Z0-9_]*
+    # Regex used to search for handlebars and its most important features
+    # by using the following named captures.
+    #
+    # 1. handelbars
+    # 2. to_replace
+    # 3. name
+    # 4. arguments
+    #
+    # @example
+    #   " {{capitalize(swapcase(hey))}} {{swapcase(user_name())}}".scan(INNERMOST_HELPER_REGEX)
+    #   
+    #   [
+    #     [
+    #       "{{capitalize(swapcase(hey))}}",    1) handlebars
+    #       "capitalize(",
+    #       "swapcase(hey)",                    2) to_replace
+    #       "swapcase",                         3) swapcase
+    #       "hey",                              4) arguments
+    #       ")"
+    #     ],
+    #    [...]
+    #   ]
+    INNERMOST_HELPER_REGEX = /
       (?<handlebars>
         {{                          # opening double braces
-        (?<before>                  # open none capture group everything before innermost method
+        (?<before>                  # open none capture group everything before innermost helper
           \s*                       # allow any amount of spaces, for visual clarity
-          [a-zA-Z0-9_]*             # method name
+          [a-zA-Z0-9_]*             # helper name
           \(                        # open parenthesis
-          (?=\s*[a-zA-Z0-9_]*\()    # ensure there are more inner methods
+          (?=\s*[a-zA-Z0-9_]*\()    # ensure there are more inner helpers
         )*
         (?<to_replace>
           \s*                       # allow any amount of spaces, for visual clarity
           (?<name>
-            [a-zA-Z0-9_]+           # innermost method name
+            [a-zA-Z0-9_]+           # innermost helper name
           )
           \(                        # parenthesis
           (?<arguments>
-            [a-zA-Z0-9_. |-]*      # innermost method arguments
+            [a-zA-Z0-9_. |-]*       # innermost helper arguments
           )
           \)
           \s*                       # allow any amount of spaces, for visual clarity
         )
         (?<after>
-          [) ]*                       # only allow closing parenthesis and spaces
+          [) ]*                     # only allow closing parenthesis and spaces
         )
         }}
-      )                          # closing double braces
+      )                             # closing double braces
     /x
   
     attr_reader :string
@@ -77,14 +105,16 @@ module StringReplacer
     end
     
     # Executes the logic to recursively replace all handlebars with registered helpers
-    # If there is an error, execution stops and is returned
+    # If there is an error, execution stops and the error is added to @errors
+    #
     # @return [String] with replaced handlebars
     def replace
       string = @string
       @errors = []
-      string.scan(INNERMOST_METHOD_REGEX).map(&:first).each do |handlebars|
+      handlebars_array = string.scan(INNERMOST_HELPER_REGEX).map(&:first)
+      handlebars_array.each do |handlebars|
         begin
-          result = execute_methods_recursively(handlebars)
+          result = replace_helpers_recursively(handlebars)
           result = result.slice(2..-3) #remove the handlebars
           string = string.sub(handlebars, result)
         rescue => exception
@@ -97,6 +127,9 @@ module StringReplacer
       return string
     end
 
+    # Same as #replace, but raises error if an error is raised during interpolation
+    #
+    # @return [String]
     def replace!
       @raise_errors = true
       replace
@@ -104,38 +137,43 @@ module StringReplacer
       @raise_errors = false
     end
 
-    def method_is_whitelisted?(name)
+    # Checks if a helper exists
+    #
+    # @param [String,Symbol] name <description>
+    # @return [Boolean] true if helper is registered
+    def helper_exists?(name)
       name = name.to_sym
       self.class.registered_helpers.include?(name)
     end
 
     private
     
-    def execute_methods_recursively(handlebars)
-      string = handlebars
-  
-      match = string.match(INNERMOST_METHOD_REGEX)
-      if match
-        captures = match.named_captures
-        to_replace = captures['to_replace']
-        method_name = captures['name']
-        argument = captures['arguments']
+    # Receives a single 'handlebars' and recusively executes helpers and replaces them
+    # on the main string with the returned value
+    #
+    # @param [String] handlebars example: "{{capitalize(swapcase(hey))}}"
+    # @return [String] replaced string, example: "{{Hey}}"
+    def replace_helpers_recursively(handlebars)  
+      match = handlebars.match(INNERMOST_HELPER_REGEX)
+      return handlebars unless match
+      
+      captures = match.named_captures
+      to_replace = captures['to_replace']
+      helper_name = captures['name']
+      argument = captures['arguments']
 
-        if !self.method_is_whitelisted?(method_name)
-          raise NoMethodError.new("Unregistered helper '#{method_name}'")
-        end
-
-        # run the method
-        result = if argument == ''
-          self.public_send(method_name)
-        else
-          self.public_send(method_name, argument)
-        end
-        string = string.sub(to_replace, result)
-        string = execute_methods_recursively(string)
+      if !self.helper_exists?(helper_name)
+        raise NoMethodError.new("Unregistered helper '#{helper_name}'")
       end
-  
-      return string
+
+      # call the method
+      result = if argument == ''
+        self.public_send(helper_name)
+      else
+        self.public_send(helper_name, argument)
+      end
+      handlebars = handlebars.sub(to_replace, result)
+      replace_helpers_recursively(handlebars)
     end
   
   end

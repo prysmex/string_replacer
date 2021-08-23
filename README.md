@@ -4,7 +4,6 @@ This is a very simple gem that uses regex to replace a string with handlebars no
 
 There are other more robust solutions like https://github.com/Shopify/liquid, but if your are looking for a very lightweight extendible solution, this might be the way to go.
 
-
 ## Installation
 
 Add this line to your application's Gemfile:
@@ -15,19 +14,23 @@ gem 'string_replacer'
 
 And then execute:
 
-    $ bundle
+```ruby
+bundle
+```
 
 Or install it yourself as:
 
-    $ gem install string_replacer
+```ruby
+gem install string_replacer
+```
 
 ## Usage
 
 The idea is to simple extend the base StringReplacer::Replacer class and user the `register_helper` class method to define a whitelist of methods you want to have available.
 
 An example:
-```ruby
 
+```ruby
 class CustomStringReplacer < StringReplacer::Replacer
   register_helper(:i18n) do |argument|
     I18n.t(argument.strip)
@@ -54,6 +57,7 @@ your_string.replace
 ```
 
 ## Errors
+
 If there are any errors (like definining a method inside the handlebars that is not registered) execution of the
 replacement is halted and the errors can be accessed via de `errors` method.
 
@@ -69,6 +73,7 @@ your_error_string.errors
 If you want errors to be raised, simply use `replace!`
 
 ## Hash arguments
+
 It is possible to pass a hash of arguments that can be accessed by the registered methods. This is helpful when you need some context that is not provided
 by the handlebars expression.
 
@@ -83,6 +88,3 @@ your_string = AnotherStringReplacer.new('The name of the current user name is: {
 your_string.replace
 # returns 'The name of the current user name is: Yoda!'
 ```
-
-
-
