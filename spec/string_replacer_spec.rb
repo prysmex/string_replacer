@@ -134,5 +134,21 @@ describe StringReplacer::Replacer do
 
   end
 
+  describe 'is_replaceable' do
+
+    it 'returns true when it is replaceable' do
+      expect(
+        ::DummyReplacer.new('My name is {{some_unknown_helper(john)}}').is_replaceable
+      ).to eql(true)
+    end
+
+    it 'returns false when it is replaceable' do
+      expect(
+        ::DummyReplacer.new('My name is {{some_unknown_helper(john) ').is_replaceable
+      ).to eql(false)
+    end
+
+  end
+
 
 end

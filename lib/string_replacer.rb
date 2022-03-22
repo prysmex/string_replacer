@@ -146,6 +146,11 @@ module StringReplacer
       self.class.registered_helpers.include?(name)
     end
 
+    # @return [Boolean]
+    def is_replaceable
+      !string.scan(INNERMOST_HELPER_REGEX).empty?
+    end
+
     private
     
     # Receives a single 'handlebars' and recusively executes helpers and replaces them
