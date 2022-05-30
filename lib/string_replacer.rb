@@ -80,7 +80,7 @@ module StringReplacer
           )
           \(                        # parenthesis
           (?<arguments>
-            [a-zA-Z0-9_. |-]*       # innermost helper arguments
+            [a-zA-Z0-9_.,'" |-]*       # innermost helper arguments
           )
           \)
           \s*                       # allow any amount of spaces, for visual clarity
