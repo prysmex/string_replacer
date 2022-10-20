@@ -64,23 +64,24 @@ module StringReplacer
     #     ],
     #    [...]
     #   ]
+    HELPER_REGEX = /[a-zA-Z0-9_-]/
     INNERMOST_HELPER_REGEX = /
       (?<handlebars>
         {{                          # opening double braces
         (?<before>                  # open none capture group everything before innermost helper
           \s*                       # allow any amount of spaces, for visual clarity
-          [a-zA-Z0-9_]*             # helper name
+          #{HELPER_REGEX}*          # helper name
           \(                        # open parenthesis
-          (?=\s*[a-zA-Z0-9_]*\()    # ensure there are more inner helpers
+          (?=\s*#{HELPER_REGEX}*\() # ensure there are more inner helpers
         )*
         (?<to_replace>
           \s*                       # allow any amount of spaces, for visual clarity
           (?<name>
-            [a-zA-Z0-9_]+           # innermost helper name
+            #{HELPER_REGEX}+        # innermost helper name
           )
           \(                        # parenthesis
           (?<arguments>
-            [a-zA-Z0-9_.,'" |-]*       # innermost helper arguments
+            [a-zA-Z0-9_.,'" |-]*    # innermost helper arguments
           )
           \)
           \s*                       # allow any amount of spaces, for visual clarity
@@ -175,10 +176,20 @@ module StringReplacer
       result = if argument == ''
         self.public_send(helper_name)
       else
-        self.public_send(helper_name, argument)
+        self.public_send(helper_name, without_quotes(argument))
       end
       handlebars = handlebars.sub(to_replace, result)
       replace_helpers_recursively(handlebars)
+    end
+
+    # @example "'now'" => "now"
+    #
+    # @param [String] param
+    # @return [String]
+    def without_quotes(string)
+      string
+        .sub(/\A["']/, '')
+        .sub(/["']\z/, '')
     end
   
   end
