@@ -97,29 +97,31 @@ module StringReplacer
     attr_reader :passed_data
     attr_reader :errors
   
-    def initialize(string, passed_data = {})
+    def initialize(string)
       raise TypeError.new("first argument must be a String, passed #{string.class}") unless string.is_a?(String)
-      raise TypeError.new("second argument must be a Hash, passed #{string.class}") unless passed_data.is_a?(Hash)
 
       @string = string
-      @passed_data = passed_data
     end
     
     # Executes the logic to recursively replace all handlebars with registered helpers
     # If there is an error, execution stops and the error is added to @errors
     #
     # @return [String] with replaced handlebars
-    def replace
-      string = @string.dup
+    def replace(passed_data = {})
+      raise TypeError.new("passed_data must be a Hash, got #{string.inspect}") unless passed_data.is_a?(Hash)
+      @passed_data = passed_data
       @errors = []
+
+      string = @string.dup
 
       handlebars_array = string.scan(INNERMOST_HELPER_REGEX).map(&:first)
       handlebars_array.each do |handlebars|
         begin
           string.sub!(handlebars, eval_handlebars(handlebars))
         rescue => exception
-          msg = exception.message + " while interpolating '#{handlebars}'"
-          new_exception = exception.class.new(msg)
+          new_exception = exception.class.new(
+            "#{exception.message} while interpolating '#{handlebars}'"
+          )
           @errors.push(new_exception)
           raise new_exception if @raise_errors
         end
@@ -131,9 +133,9 @@ module StringReplacer
     # Same as #replace, but raises error if an error is raised during interpolation
     #
     # @return [String]
-    def replace!
+    def replace!(*args)
       @raise_errors = true
-      replace
+      replace(*args)
     ensure
       @raise_errors = false
     end

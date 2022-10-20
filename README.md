@@ -84,7 +84,7 @@ class AnotherStringReplacer < StringReplacer::Replacer
   end
 end
 
-replacer = AnotherStringReplacer.new('The name of the current user name is: {{current_username()}}!', {user_name: 'Yoda'})
-replacer.replace
+replacer = AnotherStringReplacer.new('The name of the current user name is: {{current_username()}}!')
+replacer.replace({user_name: 'Yoda'})
 # returns 'The name of the current user name is: Yoda!'
 ```

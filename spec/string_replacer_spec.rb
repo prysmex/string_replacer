@@ -112,13 +112,13 @@ describe StringReplacer::Replacer do
 
     it "can pass data as hash" do
       expect(
-        ::DummyReplacer.new('My name is {{user_name()}}', {user_name: 'Luke'}).replace
+        ::DummyReplacer.new('My name is {{user_name()}}').replace({user_name: 'Luke'})
       ).to eql('My name is Luke')
     end
 
     it "ignores space inside handlebar" do
       expect(
-        ::DummyReplacer.new('My name is {{     user_name()     }}', {user_name: 'Luke'}).replace
+        ::DummyReplacer.new('My name is {{     user_name()     }}').replace({user_name: 'Luke'})
       ).to eql('My name is Luke')
     end
 
