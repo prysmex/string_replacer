@@ -41,18 +41,18 @@ class CustomStringReplacer < StringReplacer::Replacer
   end
 end
 
-your_string = CustomStringReplacer.new('The {{upcase(translation)}} of hello is: {{i18n(hello)}}')
+replacer = CustomStringReplacer.new('The {{upcase(translation)}} of hello is: {{i18n(hello)}}')
 
-your_string.replace
+replacer.replace
 # returns 'The TRANSLATION of hello is: hola'
 ```
 
 You can even nest multiple methods like this.
 
 ```ruby
-your_string = CustomStringReplacer.new('The translation of hello is: {{upcase(i18n(hello))}}')
+replacer = CustomStringReplacer.new('The translation of hello is: {{upcase(i18n(hello))}}')
 
-your_string.replace
+replacer.replace
 # returns 'The translation of hello is: HOLA'
 ```
 
@@ -62,11 +62,11 @@ If there are any errors (like definining a method inside the handlebars that is 
 replacement is halted and the errors can be accessed via de `errors` method.
 
 ```ruby
-your_error_string = CustomStringReplacer.new('This will cause an {{upcase(error)}} {{some_unregisered_method()}}')
-your_error_string.replace
+replacer = CustomStringReplacer.new('This will cause an {{upcase(error)}} {{some_unregisered_method()}}')
+replacer.replace
 # returns 'This will cause an ERROR {{some_unregisered_method()}}'
 
-your_error_string.errors
+replacer.errors
 # returns [#<NoMethodError: Unregistered helper 'some_unregisered_method' while interpolating '{{some_unregisered_method()}}'>]
 ```
 
@@ -84,7 +84,7 @@ class AnotherStringReplacer < StringReplacer::Replacer
   end
 end
 
-your_string = AnotherStringReplacer.new('The name of the current user name is: {{current_username()}}!', {user_name: 'Yoda'})
-your_string.replace
+replacer = AnotherStringReplacer.new('The name of the current user name is: {{current_username()}}!', {user_name: 'Yoda'})
+replacer.replace
 # returns 'The name of the current user name is: Yoda!'
 ```

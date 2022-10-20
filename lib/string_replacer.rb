@@ -16,7 +16,7 @@ module StringReplacer
 
       def inherited(subclass)
         #support subclassing
-        subclass.instance_variable_set('@registered_helpers', self.registered_helpers)
+        subclass.instance_variable_set('@registered_helpers', registered_helpers)
         super
       end
 
@@ -99,7 +99,7 @@ module StringReplacer
   
     def initialize(string, passed_data = {})
       raise TypeError.new("first argument must be a String, passed #{string.class}") unless string.is_a?(String)
-      raise TypeError.new("first argument must be a Hash, passed #{string.class}") unless passed_data.is_a?(Hash)
+      raise TypeError.new("second argument must be a Hash, passed #{string.class}") unless passed_data.is_a?(Hash)
 
       @string = string
       @passed_data = passed_data
@@ -110,14 +110,13 @@ module StringReplacer
     #
     # @return [String] with replaced handlebars
     def replace
-      string = @string
+      string = @string.dup
       @errors = []
+
       handlebars_array = string.scan(INNERMOST_HELPER_REGEX).map(&:first)
       handlebars_array.each do |handlebars|
         begin
-          result = replace_helpers_recursively(handlebars)
-          result = result.slice(2..-3) #remove the handlebars
-          string = string.sub(handlebars, result)
+          string.sub!(handlebars, eval_handlebars(handlebars))
         rescue => exception
           msg = exception.message + " while interpolating '#{handlebars}'"
           new_exception = exception.class.new(msg)
@@ -125,7 +124,8 @@ module StringReplacer
           raise new_exception if @raise_errors
         end
       end
-      return string
+
+      string
     end
 
     # Same as #replace, but raises error if an error is raised during interpolation
@@ -153,33 +153,50 @@ module StringReplacer
     end
 
     private
+
+    # @param [String] handlebars example: "{{capitalize(swapcase(hey))}}"
+    # @return [String] replaced string, example: "Hey"
+    def eval_handlebars(handlebars)
+      eval_helpers_recursively(handlebars)[2..-3]
+    end
     
     # Receives a single 'handlebars' and recusively executes helpers and replaces them
     # on the main string with the returned value
     #
     # @param [String] handlebars example: "{{capitalize(swapcase(hey))}}"
     # @return [String] replaced string, example: "{{Hey}}"
-    def replace_helpers_recursively(handlebars)  
+    def eval_helpers_recursively(handlebars)
       match = handlebars.match(INNERMOST_HELPER_REGEX)
       return handlebars unless match
       
       captures = match.named_captures
-      to_replace = captures['to_replace']
-      helper_name = captures['name']
-      argument = captures['arguments']
+      to_replace, helper_name, argument = captures
+        .values_at(
+          'to_replace',
+          'name',
+          'arguments'
+        )
 
-      if !self.helper_exists?(helper_name)
-        raise NoMethodError.new("Unregistered helper '#{helper_name}'")
+      result = eval_helper(helper_name, argument)
+
+      handlebars = handlebars.sub(to_replace, result)
+      eval_helpers_recursively(handlebars)
+    end
+
+    # @param [String] name
+    # @param [String] argument
+    # @return [String]
+    def eval_helper(name, argument)
+      if !helper_exists?(name)
+        raise NoMethodError.new("Unregistered helper '#{name}'")
       end
 
       # call the method
-      result = if argument == ''
-        self.public_send(helper_name)
+      if argument == ''
+        public_send(name)
       else
-        self.public_send(helper_name, without_quotes(argument))
+        public_send(name, without_quotes(argument))
       end
-      handlebars = handlebars.sub(to_replace, result)
-      replace_helpers_recursively(handlebars)
     end
 
     # @example "'now'" => "now"
