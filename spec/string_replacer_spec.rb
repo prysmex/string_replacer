@@ -1,5 +1,5 @@
 require 'string_replacer'
-require 'byebug'
+require 'debug'
 
 def remove_classes(*classes)
   classes.each do |klass|
