@@ -1,4 +1,6 @@
-require "string_replacer/version"
+# frozen_string_literal: true
+
+require 'string_replacer/version'
 
 module StringReplacer
   #
@@ -7,40 +9,45 @@ module StringReplacer
   #
   class Replacer
 
-    #initialize class instance variable
-    instance_variable_set('@registered_helpers', [])
+    # initialize class instance variable
+    instance_variable_set(:@registered_helpers, [])
 
-    #class methods
+    # class methods
     class << self
       attr_accessor :registered_helpers
 
       def inherited(subclass)
-        #support subclassing
-        subclass.instance_variable_set('@registered_helpers', registered_helpers)
+        # support subclassing
+        subclass.instance_variable_set(:@registered_helpers, registered_helpers)
         super
       end
 
       # Registers a helper to allow its usage.
       #
       # @return [String] name of registered helper
-      def register_helper(name, &block)
+      def register_helper(name, &)
         name = name.to_sym
-        define_method(name, &block) #or define_singleton_method?
+        define_method(name, &) # or define_singleton_method?
         @registered_helpers.push(name)
         name
       end
-      
+
       # Unregisters a helper from class
       #
       # @return [Array] Remaining helpers
       def unregister_helper(name)
         name = name.to_sym
-        undef_method name rescue false
-        @registered_helpers = @registered_helpers - [name]
+
+        begin
+          undef_method name
+          @registered_helpers -= [name]
+        rescue NoMethodError
+          # noop
+        end
       end
 
     end
-    
+
     # IMPORTANT! always keep in sync method name regex! [a-zA-Z0-9_]*
     # Regex used to search for handlebars and its most important features
     # by using the following named captures.
@@ -52,7 +59,7 @@ module StringReplacer
     #
     # @example
     #   " {{capitalize(swapcase(hey))}} {{swapcase(user_name())}}".scan(INNERMOST_HELPER_REGEX)
-    #   
+    #
     #   [
     #     [
     #       "{{capitalize(swapcase(hey))}}",    1) handlebars
@@ -65,7 +72,7 @@ module StringReplacer
     #    [...]
     #   ]
     HELPER_REGEX = /[a-zA-Z0-9_-]/
-    INNERMOST_HELPER_REGEX = /
+    INNERMOST_HELPER_REGEX = %r{
       (?<handlebars>
         {{                          # opening double braces
         (?<before>                  # open none capture group everything before innermost helper
@@ -81,7 +88,7 @@ module StringReplacer
           )
           \(                        # parenthesis
           (?<arguments>
-            [a-zA-Z0-9_.,'" \\|*\/+-]*    # innermost helper arguments
+            [a-zA-Z0-9_.,'" \\|*/+-]*    # innermost helper arguments
           )
           \)
           \s*                       # allow any amount of spaces, for visual clarity
@@ -91,24 +98,23 @@ module StringReplacer
         )
         }}
       )                             # closing double braces
-    /x
-  
-    attr_reader :string
-    attr_reader :passed_data
-    attr_reader :errors
-  
+    }x
+
+    attr_reader :string, :passed_data, :errors
+
     def initialize(string)
       raise TypeError.new("first argument must be a String, passed #{string.class}") unless string.is_a?(String)
 
       @string = string
     end
-    
+
     # Executes the logic to recursively replace all handlebars with registered helpers
     # If there is an error, execution stops and the error is added to @errors
     #
     # @return [String] with replaced handlebars
     def replace(passed_data = {})
       raise TypeError.new("passed_data must be a Hash, got #{string.inspect}") unless passed_data.is_a?(Hash)
+
       @passed_data = passed_data
       @errors = []
 
@@ -116,15 +122,13 @@ module StringReplacer
 
       handlebars_array = string.scan(INNERMOST_HELPER_REGEX).map(&:first)
       handlebars_array.each do |handlebars|
-        begin
-          string.sub!(handlebars, eval_handlebars(handlebars))
-        rescue => exception
-          new_exception = exception.class.new(
-            "#{exception.message} while interpolating '#{handlebars}'"
-          )
-          @errors.push(new_exception)
-          raise new_exception if @raise_errors
-        end
+        string.sub!(handlebars, eval_handlebars(handlebars))
+      rescue NoMethodError => e
+        new_exception = e.class.new(
+          "#{e.message} while interpolating '#{handlebars}'"
+        )
+        @errors.push(new_exception)
+        raise new_exception if @raise_errors
       end
 
       string
@@ -150,7 +154,7 @@ module StringReplacer
     end
 
     # @return [Boolean]
-    def is_replaceable
+    def replaceable?
       !string.scan(INNERMOST_HELPER_REGEX).empty?
     end
 
@@ -161,7 +165,7 @@ module StringReplacer
     def eval_handlebars(handlebars)
       eval_helpers_recursively(handlebars)[2..-3]
     end
-    
+
     # Receives a single 'handlebars' and recusively executes helpers and replaces them
     # on the main string with the returned value
     #
@@ -170,7 +174,7 @@ module StringReplacer
     def eval_helpers_recursively(handlebars)
       match = handlebars.match(INNERMOST_HELPER_REGEX)
       return handlebars unless match
-      
+
       captures = match.named_captures
       to_replace, helper_name, argument = captures
         .values_at(
@@ -189,9 +193,7 @@ module StringReplacer
     # @param [String] argument
     # @return [String]
     def eval_helper(name, argument)
-      if !helper_exists?(name)
-        raise NoMethodError.new("Unregistered helper '#{name}'")
-      end
+      raise NoMethodError.new("Unregistered helper '#{name}'") unless helper_exists?(name)
 
       # call the method
       if argument == ''
@@ -210,6 +212,6 @@ module StringReplacer
         .sub(/\A["']/, '')
         .sub(/["']\z/, '')
     end
-  
+
   end
 end
