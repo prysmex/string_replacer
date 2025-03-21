@@ -137,9 +137,9 @@ module StringReplacer
     # Same as #replace, but raises error if an error is raised during interpolation
     #
     # @return [String]
-    def replace!(*args)
+    def replace!(*)
       @raise_errors = true
-      replace(*args)
+      replace(*)
     ensure
       @raise_errors = false
     end
